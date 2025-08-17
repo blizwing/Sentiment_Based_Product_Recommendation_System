@@ -1,6 +1,7 @@
 # ============================================================
 # Phase 8 — Deployment (Flask, local) - Version 4
-# app_v4.py — Single-CF + Sentiment re-rank (Top-5) with Item Names
+# Why: Serve personalized recommendations via a web interface.
+# app.py — Single-CF + Sentiment re-rank (Top-5) with Item Names
 # ============================================================
 from flask import Flask, render_template, request, jsonify
 from pathlib import Path
@@ -277,36 +278,17 @@ def index():
             # Rename for template clarity
             top5 = top5.rename(columns={"name": "item_name"})
             result = top5.to_dict(orient="records")
-    # If you don't have templates/index.html, fallback simple HTML below will render.
-    try:
-        return render_template("index.html", result=None if error else result, error=error, username=username)
-    except Exception:
-        # Fallback simple HTML if template missing
-        if error:
-            return f"<h3 style='color:#b00'>{error}</h3>", 400
-        if result is None:
-            return """
-                <form method="POST">
-                    <label>Username:</label>
-                    <input name="username" />
-                    <button type="submit">Recommend</button>
-                </form>
-            """
-        rows = "".join(
-            f"<tr><td>{i+1}</td><td>{r['id']}</td><td>{r.get('item_name','')}</td>"
-            f"<td>{r['positive_pct']:.3f}</td><td>{int(r['reviews_total'])}</td><td>{r['fused']:.3f}</td></tr>"
-            for i, r in enumerate(result)
-        )
-        name_note = "" if id_to_name else "<p><em>(Note: name map missing; showing IDs as fallback.)</em></p>"
-        return f"""
-            <h3>Top-5 Recommendations</h3>
-            {name_note}
-            <table border="1" cellpadding="6">
-                <tr><th>#</th><th>ID</th><th>Name</th><th>Pos %</th><th>Reviews</th><th>Score</th></tr>
-                {rows}
-            </table>
-            <p><a href="/">Back</a></p>
-        """
+
+    return render_template(
+    "index.html",
+    result=None if error else result,
+    error=error,
+    username=username,
+    cf=final_cf,
+    has_names=bool(id_to_name),
+    users_count=len(user_map),
+    items_count=len(item_map)
+)
 
 @app.route("/api/recommend", methods=["POST"])
 def api_recommend():
@@ -346,4 +328,4 @@ def random_user():
 if __name__ == "__main__":
     # Flask looks for templates/ automatically; put index.html in app/templates/index.html
     # Run: python app_v4.py
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5500)

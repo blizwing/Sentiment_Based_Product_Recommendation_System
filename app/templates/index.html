@@ -1,62 +1,215 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>SBPRS — Top-5 Recommendations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-      .button-container {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
+      :root{
+        --bg: #0b1220; --panel:#0f172a; --border:#1f2a44; --text:#e6edf6; --muted:#8aa0b6;
+        --brand:#5b8def; --brand-2:#8b5cf6; --ok:#16a34a; --warn:#f59e0b;
+        --table-head:#14203a; --table-row:#0e162b; --table-alt:#0c1426; --hover:#122243;
       }
+      *{box-sizing:border-box}
+      body{
+        margin:0; background:var(--bg); color:var(--text);
+        font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      .wrap{max-width: 1080px; margin:32px auto; padding:0 16px;}
+      .panel{
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px; padding: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      }
+      .hero{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
+      .brand{display:flex; align-items:center; gap:12px}
+      .logo{
+        width:42px; height:42px; border-radius:12px; color:#fff; font-weight:800; display:grid; place-items:center;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      }
+      h1{margin:0; font-size: clamp(18px, 2.8vw, 26px)}
+      .meta{color:var(--muted); font-size:12px; margin-top:2px}
+
+      form .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+      label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+      input[name="username"]{
+        flex:1 1 360px; padding:10px 12px; font-size:15px; color:var(--text);
+        background:#0b1326; border:1px solid var(--border); border-radius:10px; outline:none;
+      }
+      input[name="username"]:focus{border-color: var(--brand)}
+      .btn{
+        padding:10px 14px; border-radius:10px; border:1px solid var(--border);
+        background: #13213d; color:var(--text); cursor:pointer; font-weight:600;
+      }
+      .btn:hover{filter:brightness(1.08)}
+      .btn.secondary{background:#101a31}
+
+      .error{
+        margin-top:12px; background: rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4);
+        color:#fecaca; padding:10px 12px; border-radius:10px;
+      }
+
+      .table-wrap{
+        margin-top:14px; border:1px solid var(--border); border-radius:12px; overflow:hidden;
+      }
+      table{width:100%; border-collapse:collapse; font-size:14px}
+      thead th{
+        background: var(--table-head); text-align:left; padding:12px 10px; white-space:nowrap;
+        position: sticky; top:0; z-index:1; cursor:pointer; user-select:none;
+      }
+      thead th .sort{opacity:.65; font-size:11px; margin-left:6px}
+      tbody tr{background: var(--table-row)}
+      tbody tr:nth-child(even){background: var(--table-alt)}
+      tbody tr:hover{background: var(--hover)}
+      td{padding:10px 10px; border-top:1px solid var(--border)}
+      .num{text-align:right; font-variant-numeric: tabular-nums}
+      .tag{display:inline-block; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); background:#0b1326; color:var(--muted)}
+      .muted{color:var(--muted); font-size:12px}
+      .footer-note{margin-top:10px; color:var(--muted); font-size:12px}
+
+      /* loading overlay */
+      .loading{position:fixed; inset:0; display:none; place-items:center; background:rgba(11,18,32,.6); z-index:99}
+      .loading.show{display:grid}
+      .spinner{width:44px; height:44px; border:3px solid rgba(255,255,255,.15); border-top-color:white; border-radius:50%; animation:spin .9s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+
+      @media (max-width:720px){ .num{white-space:nowrap} }
     </style>
   </head>
   <body>
-    <h2>Sentiment-Based Product Recommendations</h2>
-    <form method="POST" id="recommendForm">
-      <label>Username: </label>
-      <input name="username" id="username" value="{{ username or '' }}" required />
-      <div class="button-container">
-        <button type="submit">Recommend</button>
-        <button type="button" id="randomUserBtn">Random User</button>
+    <div class="loading" id="loading"><div class="spinner"></div></div>
+
+    <div class="wrap">
+      <div class="hero">
+        <div class="brand">
+          <div class="logo">SB</div>
+          <div>
+            <h1>Sentiment-Based Product Recommender</h1>
+            <div class="meta">CF: <strong>{{ cf or 'item' }}</strong> · Users: {{ users_count or 0 }} · Items: {{ items_count or 0 }}</div>
+          </div>
+        </div>
       </div>
-    </form>
 
-    {% if error %}
-      <p style="color:#b00">{{ error }}</p>
-    {% endif %}
+      <div class="panel">
+        <form method="POST" id="recommendForm" onsubmit="startLoading()">
+          <div class="row">
+            <div style="flex:1 1 420px">
+              <label for="username">Username</label>
+              <input name="username" id="username" value="{{ username or '' }}" placeholder="Enter a username from dataset" required />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button class="btn" type="submit">Recommend</button>
+              <button class="btn secondary" type="button" id="randomUserBtn">Random User</button>
+            </div>
+          </div>
+        </form>
 
-    {% if result %}
-      <h3>Top-5</h3>
-      <table border="1" cellpadding="6">
-        <tr>
-          <th>#</th><th>ID</th><th>Name</th><th>Pos %</th><th>Reviews</th><th>Score</th>
-        </tr>
-        {% for r in result %}
-        <tr>
-          <td>{{ loop.index }}</td>
-          <td>{{ r.id }}</td>
-          <td>{{ r.item_name }}</td>
-          <td>{{ "%.3f"|format(r.positive_pct) }}</td>
-          <td>{{ r.reviews_total|int }}</td>
-          <td>{{ "%.3f"|format(r.fused) }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    {% endif %}
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if result %}
+          <div class="table-wrap">
+            <table id="recTable" data-sortedby="rank" data-order="asc">
+              <thead>
+                <tr>
+                  <th data-key="rank"># <span class="sort">▲▼</span></th>
+                  <th data-key="id">ID <span class="sort">▲▼</span></th>
+                  <th data-key="item_name">Name <span class="sort">▲▼</span></th>
+                  <th class="num" data-key="positive_pct">Pos % <span class="sort">▲▼</span></th>
+                  <th class="num" data-key="reviews_total">Reviews <span class="sort">▲▼</span></th>
+                  <th class="num" data-key="fused">Score <span class="sort">▲▼</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in result %}
+                  <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="muted">{{ r.id }}</td>
+                    <td>{{ r.item_name }}</td>
+                    <td class="num">{{ "%.1f"|format(r.positive_pct * 100) }}</td>
+                    <td class="num">{{ r.reviews_total|int }}</td>
+                    <td class="num">{{ "%.3f"|format(r.fused) }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="footer-note">Click a column header to sort. “Random User” runs another user through the same pipeline.</div>
+        {% endif %}
+      </div>
+    </div>
 
     <script>
-      document.getElementById('randomUserBtn').addEventListener('click', function() {
+      // Loading overlay
+      function startLoading(){ document.getElementById('loading').classList.add('show'); }
+      function stopLoading(){ document.getElementById('loading').classList.remove('show'); }
+      window.addEventListener('pageshow', stopLoading);
+
+      // Persist last username (tiny QoL)
+      const input = document.getElementById('username');
+      try{
+        const last = localStorage.getItem('sbprs_username');
+        if(!input.value && last) input.value = last;
+        input.addEventListener('input', () => localStorage.setItem('sbprs_username', input.value));
+      }catch(e){}
+
+      // Random user
+      const randBtn = document.getElementById('randomUserBtn');
+      randBtn.addEventListener('click', () => {
+        startLoading();
         fetch('/api/random-user')
-          .then(response => response.json())
-          .then(data => {
-            if (data.username) {
-              document.getElementById('username').value = data.username;
+          .then(r => r.json())
+          .then(({ username }) => {
+            if (username) {
+              input.value = username;
               document.getElementById('recommendForm').submit();
+            } else {
+              stopLoading();
+              alert('No random user available.');
             }
           })
-          .catch(error => console.error('Error fetching random user:', error));
+          .catch(() => { stopLoading(); alert('Could not fetch random user.'); });
       });
+
+      // Table sorting (client-side)
+      (function(){
+        const table = document.getElementById('recTable');
+        if(!table) return;
+        const tbody = table.querySelector('tbody');
+        const getVal = (td) => {
+          const v = td.textContent.trim();
+          const num = Number(v.replace(/[, ]/g,''));
+          return isNaN(num) ? v.toLowerCase() : num;
+        };
+        table.querySelectorAll('thead th').forEach(th => {
+          th.addEventListener('click', () => {
+            const key = th.getAttribute('data-key');
+            if(!key) return;
+            const idx = Array.from(th.parentNode.children).indexOf(th);
+            let order = table.getAttribute('data-order') || 'asc';
+            const current = table.getAttribute('data-sortedby');
+            order = (current === key && order === 'asc') ? 'desc' : 'asc';
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a,b)=>{
+              const av = getVal(a.children[idx]);
+              const bv = getVal(b.children[idx]);
+              if (typeof av === 'number' && typeof bv === 'number'){
+                return order === 'asc' ? av - bv : bv - av;
+              } else {
+                return order === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+              }
+            });
+            rows.forEach(r => tbody.appendChild(r));
+            table.setAttribute('data-sortedby', key);
+            table.setAttribute('data-order', order);
+          });
+        });
+      })();
     </script>
   </body>
 </html>
