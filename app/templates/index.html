@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>SBPRS — Top-5 Recommendations</title>
+    <style>
+      .button-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Sentiment-Based Product Recommendations</h2>
+    <form method="POST" id="recommendForm">
+      <label>Username: </label>
+      <input name="username" id="username" value="{{ username or '' }}" required />
+      <div class="button-container">
+        <button type="submit">Recommend</button>
+        <button type="button" id="randomUserBtn">Random User</button>
+      </div>
+    </form>
+
+    {% if error %}
+      <p style="color:#b00">{{ error }}</p>
+    {% endif %}
+
+    {% if result %}
+      <h3>Top-5</h3>
+      <table border="1" cellpadding="6">
+        <tr>
+          <th>#</th><th>ID</th><th>Name</th><th>Pos %</th><th>Reviews</th><th>Score</th>
+        </tr>
+        {% for r in result %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ r.id }}</td>
+          <td>{{ r.item_name }}</td>
+          <td>{{ "%.3f"|format(r.positive_pct) }}</td>
+          <td>{{ r.reviews_total|int }}</td>
+          <td>{{ "%.3f"|format(r.fused) }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+
+    <script>
+      document.getElementById('randomUserBtn').addEventListener('click', function() {
+        fetch('/api/random-user')
+          .then(response => response.json())
+          .then(data => {
+            if (data.username) {
+              document.getElementById('username').value = data.username;
+              document.getElementById('recommendForm').submit();
+            }
+          })
+          .catch(error => console.error('Error fetching random user:', error));
+      });
+    </script>
+  </body>
+</html>
