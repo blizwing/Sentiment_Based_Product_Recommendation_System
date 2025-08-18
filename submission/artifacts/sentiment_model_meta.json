@@ -1,0 +1,1 @@
+{"best_model":"XGB_count","features":"count","vectorizer_file":"count_vectorizer.pkl","metrics":{"accuracy":0.97106351,"precision":0.9743490089,"recall":0.9956314535,"f1":0.9848752701,"roc_auc":0.9541476197}}

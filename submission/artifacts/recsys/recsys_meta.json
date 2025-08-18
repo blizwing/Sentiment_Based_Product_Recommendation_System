@@ -1,0 +1,6 @@
+{
+  "final_cf": "user",
+  "topn": 20,
+  "k_neighbors": 50,
+  "item_key_column": "id"
+}
